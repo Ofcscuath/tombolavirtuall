@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tómbola Virtual</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            text-align: center;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+        }
+        input {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-top: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin-top: 10px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+        li {
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+        }
+        .paid {
+            color: green;
+        }
+        .not-paid {
+            color: red;
+        }
+        .admin-option {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        .admin-option button {
+            display: block;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .admin-option .paid-button {
+            background-color: green;
+            color: white;
+        }
+        .admin-option .not-paid-button {
+            background-color: red;
+            color: white;
+        }
+        .admin-option button:hover {
+            opacity: 0.8;
+        }
+        .admin-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .admin-controls button {
+            width: auto;
+            padding: 5px 10px;
+            margin: 5px 0;
+            font-size: 12px;
+            background-color: #007bff;
+        }
+        .admin-controls button:hover {
+            background-color: #0056b3;
+        }
+        .admin-container {
+            position: relative;
+        }
+        #adminContainer {
+            display: none;
+        }
+        #drawButton {
+            display: none;
+            background-color: #ffc107;
+            margin-top: 20px;
+        }
+        .credits {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #555;
+        }
+        .confirm-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            text-align: center;
+        }
+        .confirm-dialog button {
+            margin: 5px;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .confirm-dialog .accept-button {
+            background-color: #28a745;
+            color: white;
+        }
+        .confirm-dialog .reject-button {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tómbola Virtual</h1>
+        <input type="text" id="nameInput" placeholder="Ingresa un nombre">
+        <input type="text" id="paymentInput" placeholder="Escribe si pagó (Sí/No)" style="display: none;">
+        <button onclick="addName()">Agregar Nombre</button>
+
+        <h3>Lista de Nombres (Máximo 5 para participantes).</h3>
+        <ul id="nameList"></ul>
+
+        <h3>Ganador:</h3>
+        <p id="winner"></p>
+
+        <div class="admin-container" id="adminContainer">
+            <input type="password" id="adminPassword" placeholder="Contraseña">
+            <button id="authenticateButton" onclick="authenticateAdmin()">Aceptar</button>
+            <button id="drawButton" onclick="drawWinner()">Sacar Ganador</button>
+            <button id="updateButton" onclick="showUpdateDialog()">Actualizar</button>
+        </div>
+
+        <div class="credits">
+            <p>Solamente tienen acceso estudiantes Normalistas del 10° E.</p>
+            <p>Página Creada por TheGringo (Allan).</p>
+        </div>
+    </div>
+
+    <div class="admin-controls">
+        <button onclick="enableAdminMode()">Entrar al Modo Admin</button>
+        <button onclick="disableAdminMode()">Salir del Modo Admin</button>
+    </div>
+
+    <!-- Opciones de pago visibles solo para admins -->
+    <div class="admin-option" id="adminOptions">
+        <button class="paid-button" onclick="updatePaymentStatus(true)">Pagó</button>
+        <button class="not-paid-button" onclick="updatePaymentStatus(false)">No Pagó</button>
+    </div>
+
+    <!-- Diálogo de confirmación para actualización -->
+    <div class="confirm-dialog" id="confirmDialog">
+        <p>¿Estás seguro de que deseas eliminar todos los nombres?</p>
+        <button class="accept-button" onclick="updateList()">Aceptar</button>
+        <button class="reject-button" onclick="closeUpdateDialog()">Cancelar</button>
+    </div>
+
+    <script>
+        let names = [];
+        let adminMode = false;
+        const adminPassword = "Admin_Adaya123.Araúz"; // Contraseña para el administrador
+
+        function addName() {
+            const nameInput = document.getElementById('nameInput');
+            const paymentInput = document.getElementById('paymentInput');
+            const name = nameInput.value.trim();
+            const payment = paymentInput.value.trim().toLowerCase();
+
+            if (name === '') {
+                alert("Por favor, ingresa un nombre.");
+                return;
+            }
+            
+            if (!adminMode && names.length >= 5) {
+                alert("Solo puedes agregar un máximo de 5 nombres.");
+                return;
+            }
+            
+            if (adminMode && payment !== '' && payment !== 'sí' && payment !== 'no') {
+                alert("Por favor, ingresa 'Sí' o 'No' en el campo de pago.");
+                return;
+            }
+
+            names.push({ name, paid: adminMode ? payment === 'sí' : false });
+            updateNameList();
+            nameInput.value = '';
+            paymentInput.value = '';
+        }
+
+        function updateNameList() {
+            const nameList = document.getElementById('nameList');
+            nameList.innerHTML = '';
+            names.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.textContent = entry.name;
+                li.className = entry.paid ? 'paid' : 'not-paid';
+                li.onclick = () => showPaymentOptions(index);
+                nameList.appendChild(li);
+            });
+        }
+
+        function showPaymentOptions(index) {
+            if (!adminMode) return;
+            
+            const adminOption = document.getElementById('adminOptions');
+            const li = document.querySelectorAll('li')[index];
+
+            if (adminOption) {
+                adminOption.style.top = `${li.offsetTop + li.offsetHeight}px`;
+                adminOption.style.left = `${li.offsetLeft}px`;
+                adminOption.style.display = 'block';
+
+                // Store the index of the selected item in adminOptions
+                adminOption.dataset.index = index;
+            }
+        }
+
+        function updatePaymentStatus(paid) {
+            const index = document.getElementById('adminOptions').dataset.index;
+            if (index !== undefined) {
+                names[index].paid = paid;
+                updateNameList();
+                document.getElementById('adminOptions').style.display = 'none';
+            }
+        }
+
+        function enableAdminMode() {
+            document.getElementById('adminContainer').style.display = 'block';
+            document.getElementById('paymentInput').style.display = 'block';
+            adminMode = true;
+            alert("Modo Admin activado. Ahora puedes agregar más nombres y gestionar pagos.");
+        }
+
+        function disableAdminMode() {
+            document.getElementById('adminContainer').style.display = 'none';
+            document.getElementById('paymentInput').style.display = 'none';
+            adminMode = false;
+            alert("Modo Admin desactivado. Solo puedes agregar hasta 5 nombres.");
+        }
+
+        function authenticateAdmin() {
+            const passwordInput = document.getElementById('adminPassword').value;
+            if (passwordInput === adminPassword) {
+                document.getElementById('drawButton').style.display = 'block';
+                document.getElementById('updateButton').style.display = 'block';
+                document.getElementById('adminOptions').style.display = 'none'; // Oculta las opciones si están visibles
+                alert("Inicio de sesión exitoso. Ahora puedes sacar un ganador y agregar más nombres.");
+            } else {
+                alert("Contraseña incorrecta. No tienes permiso para sacar un ganador.");
+            }
+        }
+
+        function drawWinner() {
+            if (names.length === 0) {
+                alert("No hay nombres en la lista.");
+                return;
+            }
+
+            const winnerElement = document.getElementById('winner');
+            const randomIndex = Math.floor(Math.random() * names.length);
+            const winner = names[randomIndex].name;
+
+            // Animación de selección de ganador
+            let animationIndex = 0;
+            const interval = setInterval(() => {
+                const randomAnimationIndex = Math.floor(Math.random() * names.length);
+                winnerElement.textContent = names[randomAnimationIndex].name;
+                animationIndex++;
+                if (animationIndex >= 30) { // Cambia de nombre 30 veces
+                    clearInterval(interval);
+                    winnerElement.textContent = `¡El ganador es: ${winner}!`;
+                }
+            }, 100);
+        }
+
+        function showUpdateDialog() {
+            document.getElementById('confirmDialog').style.display = 'block';
+        }
+
+        function closeUpdateDialog() {
+            document.getElementById('confirmDialog').style.display = 'none';
+        }
+
+        function updateList() {
+            names = [];
+            updateNameList();
+            document.getElementById('confirmDialog').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
